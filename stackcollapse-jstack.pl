@@ -66,7 +66,7 @@ sub remember_stack {
 
 my @stack;
 my $pname;
-my $include_pname = 1;		# include process names in stacks
+my $include_pname = 0;		# include process names in stacks
 my $include_tid = 0;		# include thread IDs in stacks
 my $shorten_pkgs = 0;		# shorten package names
 my $state = "?";
@@ -77,7 +77,7 @@ foreach (<>) {
 
 	if (m/^$/) {
 		# only include RUNNABLE states
-		goto clear if $state ne "RUNNABLE";
+		# goto clear if $state ne "RUNNABLE";
 
 		# save stack
 		if (defined $pname) { unshift @stack, $pname; }
