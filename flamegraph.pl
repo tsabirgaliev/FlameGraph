@@ -207,7 +207,9 @@ if ($colors eq "io")  { $bgcolor1 = "#f8f8f8"; $bgcolor2 = "#e8e8e8"; }
 		$self->{svg} .= <<SVG;
 <?xml version="1.0"$enc_attr standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg version="1.1" width="$w" height="$h" onload="init(evt)" viewBox="0 0 $w $h" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<svg version="1.1" width="$w" height="$h" onload="init(evt)" viewBox="0 0 $w $h" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+onclick="handleClick(evt)"
+>
 <!-- Flame graph stack visualization. See https://github.com/brendangregg/FlameGraph for latest version, and http://www.brendangregg.com/flamegraphs.html for examples. -->
 SVG
 	}
@@ -672,6 +674,9 @@ my $inc = <<INC;
 		var r = find_child(e, "rect");
 		var t = find_child(e, "text");
 		var w = parseFloat(r.attributes["width"].value) -3;
+		var rx = parseFloat(r.attributes["x"].value);
+		var ry = parseFloat(r.attributes["y"].value);
+
 		var txt = find_child(e, "title").textContent.replace(/\\([^(]*\\)/,"");
 		t.attributes["x"].value = parseFloat(r.attributes["x"].value) +3;
 		
@@ -682,16 +687,21 @@ my $inc = <<INC;
 		}
 		
 		t.textContent = txt;
+
 		// Fit in full text width
-		if (/^ *\$/.test(txt) || t.getSubStringLength(0, txt.length) < w)
+		if (/^ *\$/.test(txt) || t.getComputedTextLength() < w)
 			return;
-		
-		for (var x=txt.length-2; x>0; x--) {
-			if (t.getSubStringLength(0, x+2) <= w) { 
-				t.textContent = txt.substring(0,x) + "..";
-				return;
-			}
+
+		var point = t.ownerSVGElement.createSVGPoint();
+		point.x = rx + w - 5;
+		point.y = ry + 5;
+		var pos = t.getCharNumAtPosition(point)
+
+		if (pos != -1) {
+			t.textContent = txt.substring(0, pos) + "..";
+			return;
 		}
+
 		t.textContent = "";
 	}
 
@@ -927,6 +937,13 @@ my $inc = <<INC;
 			searchbtn.style["opacity"] = "0.1";
 		}
 	}
+
+	function handleClick(event) {
+		var parentNode = event.target.parentNode;
+		if (parentNode.classList.contains('func_g')) {
+			zoom(event.target.parentNode);
+		}
+	}
 ]]>
 </script>
 INC
@@ -998,7 +1015,7 @@ while (my ($id, $node) = each %Node) {
 	$nameattr->{class}       ||= "func_g";
 	$nameattr->{onmouseover} ||= "s(this)";
 	$nameattr->{onmouseout}  ||= "c()";
-	$nameattr->{onclick}     ||= "zoom(this)";
+	#$nameattr->{onclick}     ||= "zoom(this)";
 	$nameattr->{title}       ||= $info;
 	$im->group_start($nameattr);
 
